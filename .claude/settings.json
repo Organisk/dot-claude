@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "respectGitignore": true,
+  "cleanupPeriodDays": 90,
+  "env": {
+    "ENABLE_CLAUDEAI_MCP_SERVERS": "false",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(gita *)",
+      "Bash(gptodo *)",
+      "Bash(gh *)",
+      "Bash(skogai *)",
+      "Bash(argc *)",
+      "Bash(skogcli *)",
+      "Skill(gsd:*)",
+      "Skill(skogai-routing:*)",
+      "Skill(skogai-bats-testing:*)",
+      "Bash(wt *)"
+    ],
+    "defaultMode": "default",
+    "additionalDirectories": [
+      "/home/skogix/claude/",
+      "/home/dellvall/claude"
+    ]
+  },
+  "enableAllProjectMcpServers": false,
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/gsd-check-update.js"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/gsd-context-monitor.js"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "node .claude/hooks/gsd-statusline.js"
+  },
+  "disableAllHooks": false,
+  "enabledPlugins": {
+    "core@skogai-marketplace": false,
+    "worktrunk@worktrunk": false
+  },
+  "extraKnownMarketplaces": {
+    "worktrunk": {
+      "source": {
+        "source": "directory",
+        "path": "/home/skogix/.local/src/worktrunk"
+      }
+    },
+    "skogai-marketplace": {
+      "source": {
+        "source": "directory",
+        "path": "/home/skogix/.local/src/marketplace"
+      }
+    }
+  },
+  "spinnerTipsEnabled": true,
+  "alwaysThinkingEnabled": true,
+  "skipDangerousModePermissionPrompt": true,
+  "showTurnDuration": true,
+  "terminalProgressBarEnabled": true
+}
