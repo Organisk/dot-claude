@@ -1,12 +1,22 @@
-# Small Hours Games
+# Small Hours Game Engine
 
 ## What This Is
 
-A real-time multiplayer party game platform for local gatherings. One shared screen (TV/monitor) acts as the "display" showing game state, and players join from their phones via a short room code or QR scan. The platform hosts multiple games — quiz, card games, social deduction, and more — all played through a WebSocket-driven Display + Phones architecture.
+A game engine for creating multiplayer party games. JSON in, process, JSON out — the engine handles game logic (state, rules, phases, scoring) while remaining completely agnostic about how games are presented or how players connect. Terminal client is the first consumer; browser/phone/TV layers come later as presentation concerns.
 
 ## Core Value
 
-Players at a local gathering can instantly join a shared game from their phones and play together on a big screen — zero downloads, zero accounts, just a room code.
+Creating a new party game should be trivially simple — define state and rules, the engine handles everything else.
+
+## Current Milestone: v1.1 Engine Foundation
+
+**Goal:** Challenge every design assumption from the v1.0 spec, make research-backed decisions, then build the simplest possible game engine with proven patterns.
+
+**Target features:**
+- Research-validated architecture decisions (tick vs event-driven, WS vs HTTP, etc.)
+- Clean game engine with JSON in/out boundary
+- Terminal client as first consumer / dev tool
+- First games built to discover (not prescribe) shared patterns
 
 ## Requirements
 
@@ -16,29 +26,10 @@ Players at a local gathering can instantly join a shared game from their phones 
 
 ### Active
 
-- [ ] Room system with 4-char codes, lifecycle management, and capacity handling
-- [ ] WebSocket-based real-time communication with 100ms tick server broadcasts
-- [ ] Display role (shared TV screen) showing game state, lobby, leaderboards
-- [ ] Player role (phone controller) with per-player state
-- [ ] Player identity — username, deterministic emoji avatar, no auth
-- [ ] Admin system — first player becomes admin, can start games/remove players/set language
-- [ ] Bot system — auto-added for solo play, auto-removed when second human joins
-- [ ] Lobby — player list, ready status, game suggestion voting, QR code, chat
-- [ ] Quiz game — OpenTrivia DB, categories, difficulty, power-ups, scoring by speed
-- [ ] Shithead card game — 52-card deck, swap phase, play rules, 2-6 players
-- [ ] Spy Game — social deduction, clue-giving, word guessing, 3+ players
-- [ ] Cards Against Humanity — card czar, black/white cards, blind judging, 3-8 players
-- [ ] Lyrics Guessing game — match/guess song lyrics
-- [ ] Number Guess — reference/template game for extension pattern
-- [ ] Question cache — local JSON file caching from OpenTrivia DB
-- [ ] Game history — append-only JSONL log of completed games
-- [ ] Player statistics — aggregate stats per username
-- [ ] REST API — health, rooms, stats, history, DB management endpoints
-- [ ] Rate limiting — per-IP for routes, per-socket for WS, per-player for chat
-- [ ] Security — Helmet headers, input sanitization, payload limits
-- [ ] Frontend — responsive mobile-first, dark neon/glass theme, animations, sound
-- [ ] Docker deployment with health checks, HTTPS support, CI/CD via GitHub Actions
-- [ ] Game extension pattern — base class, tick system, phase management
+- [ ] Research and resolve 10 fundamental design questions from SPEC.md analysis
+- [ ] Game engine with clean JSON in/out boundary
+- [ ] Terminal client for playing and testing games
+- [ ] First 2-3 games proving the engine works
 
 ### Out of Scope
 
@@ -46,39 +37,37 @@ Players at a local gathering can instantly join a shared game from their phones 
 - User accounts/authentication — players are ephemeral per session
 - Persistent player identity across sessions — by design
 - Server-side rendering — SPA approach with WebSocket state
+- Browser/phone/TV frontend — future milestone, consumes same JSON
+- Docker/deployment infrastructure — earned after games work
+- Security hardening (Helmet, rate limiting) — earned after there's something to secure
 
 ## Context
 
-This is a ground-up rewrite of an existing party game platform. The SPEC.md captures the complete functional specification of what the system does. The architecture follows a Display + Phones pattern where all real-time communication flows through WebSockets with JSON messages. The server broadcasts game state on a 100ms tick, with player-specific state (like card hands) sent individually.
+This is a ground-up rewrite of an existing party game platform. The original SPEC.md describes the full vision, but the v1.0 roadmap front-loaded infrastructure before any game logic was proven. This milestone inverts that: build games first, let infrastructure needs emerge from real usage.
 
-The platform supports multiple simultaneous rooms, each identified by a 4-character code (excluding confusable characters I, O, S). Games follow a common extension pattern with a base GameController class implementing tick-based phase management.
+The SPEC.md remains the reference for *what games exist and how they work*, but every architectural decision (100ms tick, WebSocket-first, Display+Phone roles, GameController base class) is being challenged through research before being adopted or rejected.
 
-Key technical decisions from the spec:
-- WebSocket JSON protocol (not binary, not REST polling)
-- 100ms server tick (not client-driven)
-- Ephemeral players (no auth, no persistence)
-- Docker deployment with host networking on Linux
-- OpenTrivia DB as external dependency for quiz content
+Key pivot from v1.0:
+- Engine-first, not infrastructure-first
+- JSON in/out boundary, not WebSocket-specific
+- Discover patterns from building games, not prescribe them upfront
+- Terminal client as first consumer, not browser
 
 ## Constraints
 
 - **No auth**: Players are ephemeral — no login, no accounts, by design
-- **Local network optimized**: Designed for same-network play (display + phones)
-- **WebSocket-only real-time**: All game state via WS, HTTP only for management APIs
-- **Docker deployment**: Must run in container with health checks
-- **External API dependency**: Quiz relies on OpenTrivia DB with cache fallback
-- **Mobile-first UI**: Phone controllers must work on all screen sizes with safe areas
+- **JSON boundary**: Engine input/output is always JSON — transport is someone else's problem
+- **Simplicity**: No abstraction before the second use case proves it's needed
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| WebSocket with 100ms tick | Consistent state broadcast, simpler than event-driven | — Pending |
-| No authentication | Party game — friction-free join is core value | — Pending |
-| Deterministic emoji avatars | No upload needed, instant visual identity | — Pending |
-| OpenTrivia DB + local cache | Free question source with offline fallback | — Pending |
-| Game extension via base class | Standardized tick/phase pattern for all games | — Pending |
-| Docker with host networking | Simplest for local network WebSocket access | — Pending |
+| Engine-first, not infra-first | v1.0 had 5 infra phases before any game logic | — Pending |
+| JSON in/out boundary | Decouples engine from transport (WS, HTTP, terminal) | — Pending |
+| Terminal as first client | Fastest path to playable games, permanent dev tool | — Pending |
+| Discover patterns, don't prescribe | Build 2-3 games, extract shared patterns after | — Pending |
+| Challenge every SPEC.md assumption | Previous "just build it" approach is why we're rewriting | — Pending |
 
 ---
-*Last updated: 2026-03-15 after initialization*
+*Last updated: 2026-03-15 after milestone v1.1 start*
