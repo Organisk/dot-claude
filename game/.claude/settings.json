@@ -21,7 +21,6 @@
     ],
     "defaultMode": "default",
     "additionalDirectories": [
-      "/home/skogix/claude/",
       "/home/dellvall/claude"
     ]
   },

@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1">
+  <title>Small Hours - Player</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+
+    .player-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--glass-border);
+      position: sticky;
+      top: 0;
+      background: rgba(10, 10, 26, 0.95);
+      backdrop-filter: blur(12px);
+      z-index: 10;
+    }
+
+    .player-identity {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .player-identity .avatar {
+      font-size: 1.5rem;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(179, 71, 217, 0.15);
+      border-radius: 50%;
+    }
+
+    .player-identity .name {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .room-badge {
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--neon-purple);
+      background: rgba(179, 71, 217, 0.1);
+      padding: 4px 10px;
+      border-radius: 8px;
+      letter-spacing: 0.15em;
+    }
+
+    .player-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      gap: 16px;
+      max-width: 500px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* Sections (lobby, games) are toggled via display */
+    .section { display: none; }
+    .section.active { display: flex; flex-direction: column; gap: 16px; }
+
+    /* Lobby */
+    .ready-btn {
+      padding: 20px;
+      font-size: 1.2rem;
+      border-radius: 16px;
+      font-weight: 700;
+    }
+
+    .ready-btn.is-ready {
+      background: rgba(57, 255, 20, 0.15);
+      border: 2px solid var(--neon-green);
+      color: var(--neon-green);
+    }
+
+    .game-suggest-title {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-secondary);
+    }
+
+    .game-suggest-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    .suggest-btn {
+      padding: 16px 8px;
+      border-radius: 12px;
+      border: 1px solid var(--glass-border);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      min-height: 48px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .suggest-btn:active { transform: scale(0.95); }
+
+    .suggest-btn:hover {
+      border-color: var(--neon-purple);
+      background: rgba(179, 71, 217, 0.1);
+    }
+
+    .suggest-btn .icon { font-size: 1.4rem; }
+
+    .suggest-btn.voted {
+      border-color: var(--neon-purple);
+      background: rgba(179, 71, 217, 0.15);
+      box-shadow: 0 0 10px rgba(179, 71, 217, 0.2);
+    }
+
+    /* Number Guess */
+    .guess-section .feedback-display {
+      text-align: center;
+      font-size: 1.2rem;
+      min-height: 2em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+    }
+
+    .guess-input-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .guess-input-row input {
+      flex: 1;
+      font-size: 1.5rem;
+      text-align: center;
+      font-weight: 700;
+      padding: 16px;
+    }
+
+    .guess-input-row .btn {
+      width: auto;
+      min-width: 80px;
+      font-size: 1.1rem;
+    }
+
+    .guess-history {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .guess-chip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+    }
+
+    .guess-chip.higher { color: var(--neon-blue); border-color: rgba(77, 201, 246, 0.3); }
+    .guess-chip.lower { color: var(--neon-pink); border-color: rgba(255, 110, 199, 0.3); }
+    .guess-chip.correct { color: var(--neon-green); border-color: rgba(57, 255, 20, 0.3); background: rgba(57, 255, 20, 0.1); }
+
+    /* Quiz */
+    .quiz-section .question-text {
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .quiz-timer-display {
+      text-align: center;
+      font-size: 2rem;
+      font-weight: 900;
+      margin: 8px 0;
+    }
+
+    .answer-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .answer-btn {
+      padding: 18px 12px;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.15s;
+      min-height: 60px;
+      text-align: center;
+      color: white;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .answer-btn:active:not(:disabled) { transform: scale(0.95); }
+    .answer-btn.answer-a { background: rgba(255, 71, 87, 0.7); }
+    .answer-btn.answer-b { background: rgba(77, 201, 246, 0.7); }
+    .answer-btn.answer-c { background: rgba(57, 255, 20, 0.5); color: #0a0a1a; }
+    .answer-btn.answer-d { background: rgba(255, 159, 67, 0.7); }
+
+    .answer-btn.selected { border-color: white; box-shadow: 0 0 20px rgba(255, 255, 255, 0.3); }
+    .answer-btn.correct { background: var(--neon-green) !important; color: #0a0a1a !important; }
+    .answer-btn.incorrect { background: var(--neon-red) !important; opacity: 0.6; }
+    .answer-btn:disabled { cursor: not-allowed; }
+    .answer-btn.eliminated { opacity: 0.15; pointer-events: none; }
+
+    .powerup-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .powerup-btn {
+      padding: 10px 18px;
+      border-radius: 24px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--glass-border);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      transition: all 0.2s;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .powerup-btn:active:not(:disabled) { transform: scale(0.95); }
+    .powerup-btn:disabled, .powerup-btn.used { opacity: 0.3; cursor: not-allowed; }
+
+    /* Spy */
+    .spy-section .word-display {
+      text-align: center;
+      padding: 20px;
+      border-radius: 12px;
+      background: rgba(57, 255, 20, 0.08);
+      border: 1px solid rgba(57, 255, 20, 0.2);
+    }
+
+    .spy-section .word-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .spy-section .word-value {
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--neon-green);
+      margin-top: 4px;
+    }
+
+    .spy-section .spy-alert {
+      text-align: center;
+      padding: 20px;
+      border-radius: 12px;
+      background: rgba(255, 71, 87, 0.1);
+      border: 1px solid rgba(255, 71, 87, 0.3);
+    }
+
+    .spy-section .spy-alert-title {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: var(--neon-red);
+    }
+
+    .spy-section .spy-alert-sub {
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .clue-input-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .clue-input-row input { flex: 1; }
+    .clue-input-row .btn { width: auto; min-width: 80px; }
+
+    /* Chat (lobby) */
+    .lobby-chat {
+      margin-top: 8px;
+    }
+
+    .lobby-chat .chat-messages {
+      max-height: 150px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 8px;
+      background: rgba(10, 10, 26, 0.5);
+      border-radius: 8px;
+      min-height: 60px;
+      margin-bottom: 8px;
+    }
+
+    .chat-msg {
+      font-size: 0.85rem;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .chat-msg .author {
+      font-weight: 600;
+      color: var(--neon-blue);
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .chat-input-row input { flex: 1; }
+    .chat-input-row .btn { width: auto; min-width: 60px; }
+
+    /* Error screen */
+    .error-screen {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .error-screen .card {
+      text-align: center;
+      max-width: 350px;
+      width: 100%;
+    }
+
+    /* Score display */
+    .my-score {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    .my-score .score-val {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: var(--neon-blue);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Shithead card game */
+    .card-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-height: 50px;
+    }
+
+    .playing-card {
+      width: 58px;
+      height: 82px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      cursor: pointer;
+      border: 2px solid rgba(255,255,255,0.15);
+      transition: all 0.15s;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      background: rgba(255,255,255,0.12);
+      flex-direction: column;
+      line-height: 1;
+      gap: 2px;
+    }
+
+    .playing-card.red { color: #ff4757; background: rgba(255, 71, 87, 0.1); border-color: rgba(255, 71, 87, 0.25); }
+    .playing-card.black { color: #e0e0ff; background: rgba(224, 224, 255, 0.08); border-color: rgba(224, 224, 255, 0.2); }
+
+    .playing-card.selected {
+      border-color: var(--neon-green);
+      box-shadow: 0 0 12px rgba(57, 255, 20, 0.4);
+      transform: translateY(-6px);
+    }
+
+    .playing-card.facedown {
+      background: linear-gradient(135deg, var(--neon-purple), var(--neon-blue));
+      color: white;
+      font-size: 1.4rem;
+      border-color: rgba(179, 71, 217, 0.4);
+    }
+
+    .playing-card .card-rank { font-size: 1.3rem; }
+    .playing-card .card-suit { font-size: 1rem; opacity: 0.9; }
+
+    .playing-card.pile-card {
+      width: 80px;
+      height: 112px;
+      font-size: 1.5rem;
+      border-width: 3px;
+    }
+    .playing-card.pile-card .card-rank { font-size: 1.8rem; }
+    .playing-card.pile-card .card-suit { font-size: 1.3rem; }
+
+    .playing-card.playable {
+      border-color: rgba(57, 255, 20, 0.4);
+      box-shadow: 0 0 8px rgba(57, 255, 20, 0.15);
+    }
+    .playing-card.playable.red { border-color: rgba(255, 71, 87, 0.5); box-shadow: 0 0 8px rgba(255, 71, 87, 0.2); }
+    .playing-card.playable.black { border-color: rgba(77, 201, 246, 0.5); box-shadow: 0 0 8px rgba(77, 201, 246, 0.2); }
+
+    .playing-card.unplayable {
+      opacity: 0.35;
+      filter: grayscale(0.6);
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    @keyframes turnGlow {
+      0%, 100% { box-shadow: inset 0 0 20px rgba(57, 255, 20, 0.15), 0 0 30px rgba(57, 255, 20, 0.1); }
+      50% { box-shadow: inset 0 0 40px rgba(57, 255, 20, 0.25), 0 0 60px rgba(57, 255, 20, 0.2); }
+    }
+
+    .my-turn-glow {
+      animation: turnGlow 1.5s ease-in-out infinite;
+      border: 2px solid rgba(57, 255, 20, 0.4) !important;
+    }
+
+    @media (max-width: 400px) {
+      .answer-grid { grid-template-columns: 1fr; }
+      .game-suggest-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-animated"></div>
+
+  <!-- Connection status -->
+  <div class="connection-status disconnected" id="connStatus">
+    <span class="status-dot"></span>
+    <span id="connText">Connecting...</span>
+  </div>
+
+  <!-- Header -->
+  <header class="player-header">
+    <div class="player-identity">
+      <div class="avatar" id="myAvatar">&#128056;</div>
+      <div class="name" id="myName">Player</div>
+    </div>
+    <div class="room-badge" id="roomBadge">----</div>
+  </header>
+
+  <main class="player-main">
+
+    <!-- LOBBY SECTION -->
+    <div class="section active" id="lobbySection">
+      <button class="btn ready-btn btn-secondary" id="readyBtn" onclick="toggleReady()">
+        Tap to Ready Up
+      </button>
+
+      <div>
+        <div class="game-suggest-title">Vote for a game</div>
+        <div class="game-suggest-grid mt-1">
+          <button class="suggest-btn" onclick="suggestGame('number-guess')" id="suggestNumberGuess">
+            <span class="icon">&#127922;</span>
+            Number Guess
+          </button>
+          <button class="suggest-btn" onclick="suggestGame('quiz')" id="suggestQuiz">
+            <span class="icon">&#10067;</span>
+            Quiz
+          </button>
+          <button class="suggest-btn" onclick="suggestGame('spy')" id="suggestSpy">
+            <span class="icon">&#128373;</span>
+            Spy
+          </button>
+          <button class="suggest-btn" onclick="suggestGame('shithead')" id="suggestShithead">
+            <span class="icon">&#127183;</span>
+            Shithead
+          </button>
+        </div>
+      </div>
+
+      <!-- Admin: Start Game button -->
+      <div id="adminControls" style="display:none;">
+        <button class="btn btn-primary" id="startGameBtn" onclick="startGame()" style="font-size:1.1rem;padding:16px;">
+          Start Game
+        </button>
+      </div>
+
+      <!-- Player list -->
+      <div class="card" id="lobbyPlayers">
+        <div style="color: var(--text-secondary); font-size: 0.9rem;">Waiting for players...</div>
+      </div>
+
+      <!-- Chat -->
+      <div class="card lobby-chat">
+        <div class="chat-messages" id="lobbyChatMessages"></div>
+        <div class="chat-input-row">
+          <input type="text" id="chatInput" placeholder="Say something..." maxlength="200"
+            onkeydown="if(event.key==='Enter')sendChat()">
+          <button class="btn btn-secondary" onclick="sendChat()" style="padding:10px 16px;">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- NUMBER GUESS SECTION -->
+    <div class="section" id="numberGuessSection">
+      <div class="card text-center">
+        <div style="font-size:0.85rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;" id="ngRoundLabel">Round 1</div>
+        <div style="font-size:1.5rem;font-weight:700;color:var(--neon-blue);margin:8px 0;" id="ngRange">1 - 100</div>
+      </div>
+
+      <div class="feedback-display" id="ngFeedback"></div>
+
+      <div class="guess-input-row">
+        <input type="number" id="ngInput" placeholder="Your guess" min="1" max="100"
+          onkeydown="if(event.key==='Enter')submitGuess()">
+        <button class="btn btn-primary" onclick="submitGuess()" id="ngSubmitBtn">Guess</button>
+      </div>
+
+      <div class="guess-history" id="ngHistory"></div>
+
+      <div class="my-score" id="ngScore" style="display:none;">
+        Score: <span class="score-val" id="ngScoreVal">0</span>
+      </div>
+    </div>
+
+    <!-- QUIZ SECTION -->
+    <div class="section" id="quizSection">
+      <div class="timer-bar-container" id="quizTimerContainer" style="display:none;">
+        <div class="timer-bar" id="quizTimerBar"></div>
+      </div>
+      <div class="quiz-timer-display" id="quizTimerText"></div>
+      <div class="question-text card" id="quizQuestion"></div>
+      <div class="answer-grid" id="quizAnswers"></div>
+      <div class="powerup-row" id="quizPowerups">
+        <button class="powerup-btn" id="pwDouble" onclick="usePowerup('double')">&#10006;2 Double</button>
+        <button class="powerup-btn" id="pw5050" onclick="usePowerup('5050')">50/50</button>
+        <button class="powerup-btn" id="pwFreeze" onclick="usePowerup('freeze')">&#10052; Freeze</button>
+      </div>
+      <div class="my-score" id="quizScore" style="display:none;">
+        Score: <span class="score-val" id="quizScoreVal">0</span>
+      </div>
+    </div>
+
+    <!-- SPY SECTION -->
+    <div class="section" id="spySection">
+      <!-- Role display -->
+      <div id="spyRoleDisplay"></div>
+
+      <!-- Clue input (non-spy) -->
+      <div id="spyClueInput" style="display:none;">
+        <div class="card">
+          <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">Give a clue (without giving away the word!)</div>
+          <div class="clue-input-row">
+            <input type="text" id="clueInput" placeholder="Your clue..." maxlength="100"
+              onkeydown="if(event.key==='Enter')submitClue()">
+            <button class="btn btn-primary" onclick="submitClue()" id="clueSubmitBtn">Send</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Guess input (spy) -->
+      <div id="spyGuessInput" style="display:none;">
+        <div class="card">
+          <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">Guess the secret word!</div>
+          <div class="clue-input-row">
+            <input type="text" id="spyGuessField" placeholder="Your guess..." maxlength="100"
+              onkeydown="if(event.key==='Enter')submitSpyGuess()">
+            <button class="btn btn-danger" onclick="submitSpyGuess()" id="spyGuessBtn">Guess</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Clue list -->
+      <div class="card" id="spyClueList" style="display:none;">
+        <div style="font-size:0.85rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Clues</div>
+        <div id="spyClues"></div>
+      </div>
+
+      <div class="my-score" id="spyScore" style="display:none;">
+        Score: <span class="score-val" id="spyScoreVal">0</span>
+      </div>
+    </div>
+
+    <!-- SHITHEAD SECTION -->
+    <div class="section" id="shitheadSection">
+      <div id="shPhaseInfo" class="card text-center" style="padding:12px;">
+        <span style="font-size:0.85rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;">Shithead</span>
+      </div>
+
+      <!-- Swap Phase -->
+      <div id="shSwapView" style="display:none;">
+        <div class="card">
+          <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">Swap hand cards with face-up cards</div>
+          <div style="margin-bottom:12px;">
+            <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Your Hand</div>
+            <div id="shSwapHand" class="card-row"></div>
+          </div>
+          <div style="margin-bottom:12px;">
+            <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Face Up</div>
+            <div id="shSwapFaceUp" class="card-row"></div>
+          </div>
+          <button class="btn btn-primary" onclick="confirmShSwap()" id="shConfirmSwapBtn">Done Swapping</button>
+        </div>
+      </div>
+
+      <!-- Play Phase -->
+      <div id="shPlayView" style="display:none;">
+        <!-- Pile -->
+        <div class="card text-center" style="padding:16px;">
+          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Pile (<span id="shPileCount">0</span>)</div>
+          <div id="shPileTop" style="font-size:2.5rem;">-</div>
+          <div id="shTurnInfo" style="font-size:0.9rem;margin-top:8px;"></div>
+        </div>
+
+        <!-- My cards -->
+        <div class="card">
+          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Your Hand</div>
+          <div id="shHand" class="card-row"></div>
+        </div>
+
+        <div class="card" id="shFaceUpSection">
+          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Face Up</div>
+          <div id="shFaceUp" class="card-row"></div>
+        </div>
+
+        <div class="card" id="shFaceDownSection">
+          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;">Face Down</div>
+          <div id="shFaceDown" class="card-row"></div>
+        </div>
+
+        <!-- Action buttons -->
+        <div id="shActions" style="display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="playSelectedCards()" id="shPlayBtn" disabled style="flex:1;">Play Selected</button>
+          <button class="btn btn-secondary" onclick="pickUpPile()" id="shPickUpBtn" style="flex:1;">Pick Up Pile</button>
+        </div>
+      </div>
+
+      <!-- Other players info -->
+      <div class="card" id="shOtherPlayers" style="margin-top:8px;"></div>
+    </div>
+
+  </main>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toasts"></div>
+
+  <script>
+    // --- Avatars ---
+    const AVATARS = ['\u{1F438}', '\u{1F431}', '\u{1F984}', '\u{1F41D}', '\u{1F419}', '\u{1F99A}', '\u{1F427}', '\u{1F981}',
+                     '\u{1F40B}', '\u{1F424}', '\u{1F423}', '\u{1F994}', '\u{1F418}', '\u{1F410}', '\u{1F999}', '\u{1F417}'];
+
+    // --- State ---
+    const state = {
+      code: null,
+      name: null,
+      ws: null,
+      ready: false,
+      players: [],
+      gameType: null,
+      isSpy: false,
+      myIndex: -1,
+      selectedAnswer: null,
+      powerupsUsed: { double: false, '5050': false, freeze: false },
+      eliminatedAnswers: [],
+      guessHistory: [],
+      reconnectAttempts: 0,
+      maxReconnect: 10,
+      reconnectTimer: null,
+      votedGame: null,
+      shSelectedCards: [],
+      shSwapSelected: { hand: null, faceUp: null },
+      shitheadDecks: 1,
+      shWasTurn: false,
+    };
+
+    // --- Init ---
+    (function init() {
+      const pathParts = window.location.pathname.split('/');
+      state.code = pathParts[2]?.toUpperCase();
+      const params = new URLSearchParams(window.location.search);
+      state.name = params.get('name')?.trim();
+
+      if (!state.code || state.code.length !== 4) {
+        document.querySelector('.player-main').innerHTML =
+          '<div class="error-screen"><div class="card"><h2 style="margin-bottom:12px;">Invalid Room</h2>' +
+          '<p class="text-secondary">No valid room code in URL.</p>' +
+          '<a href="/" class="btn btn-primary mt-2" style="display:inline-flex;">Go Home</a></div></div>';
+        return;
+      }
+
+      document.getElementById('roomBadge').textContent = state.code;
+
+      if (!state.name) {
+        // Show name entry form
+        document.querySelector('.player-main').innerHTML =
+          '<div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;">' +
+          '<h2 style="font-size:1.5rem;">Join Room <span style="color:var(--neon-purple);font-family:monospace;letter-spacing:0.15em;">' + state.code + '</span></h2>' +
+          '<form id="nameForm" style="width:100%;max-width:360px;display:flex;flex-direction:column;gap:12px;">' +
+          '<input type="text" id="nameInput" placeholder="Enter your name" maxlength="20" autocomplete="off" spellcheck="false" autofocus ' +
+          'style="font-size:1.2rem;padding:16px;text-align:center;">' +
+          '<button type="submit" class="btn btn-primary" style="font-size:1.1rem;padding:16px;">Join Game</button>' +
+          '</form></div>';
+        document.getElementById('nameForm').addEventListener('submit', function(e) {
+          e.preventDefault();
+          const name = document.getElementById('nameInput').value.trim();
+          if (!name) return;
+          // Reload with name param
+          window.location.href = '/player/' + state.code + '?name=' + encodeURIComponent(name);
+        });
+        return;
+      }
+
+      document.getElementById('myName').textContent = state.name;
+
+      connect();
+    })();
+
+    // --- WebSocket ---
+    function connect() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const url = protocol + '//' + location.host + '/ws/player/' + state.code;
+
+      setConnectionStatus('reconnecting', 'Connecting...');
+
+      const ws = new WebSocket(url);
+      state.ws = ws;
+
+      ws.onopen = () => {
+        state.reconnectAttempts = 0;
+        setConnectionStatus('connected', 'Connected');
+        // Send join message
+        send({ type: 'JOIN_LOBBY', username: state.name });
+      };
+
+      ws.onmessage = (e) => {
+        try {
+          const msg = JSON.parse(e.data);
+          handleMessage(msg);
+        } catch (err) {
+          console.error('Bad message:', err);
+        }
+      };
+
+      ws.onclose = () => {
+        setConnectionStatus('disconnected', 'Disconnected');
+        scheduleReconnect();
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
+    }
+
+    function scheduleReconnect() {
+      if (state.reconnectAttempts >= state.maxReconnect) {
+        setConnectionStatus('disconnected', 'Connection lost');
+        showToast('Connection lost. Please refresh.', 'error');
+        return;
+      }
+      const delay = Math.min(1000 * Math.pow(2, state.reconnectAttempts), 30000);
+      state.reconnectAttempts++;
+      setConnectionStatus('reconnecting', 'Reconnecting (' + state.reconnectAttempts + ')...');
+      clearTimeout(state.reconnectTimer);
+      state.reconnectTimer = setTimeout(connect, delay);
+    }
+
+    function send(msg) {
+      if (state.ws?.readyState === WebSocket.OPEN) {
+        state.ws.send(JSON.stringify(msg));
+      }
+    }
+
+    // --- Message handling ---
+    function handleMessage(msg) {
+      switch (msg.type) {
+        case 'JOIN_OK':
+          state.playerId = msg.playerId;
+          state.myIndex = msg.index ?? 0;
+          if (msg.avatar) document.getElementById('myAvatar').textContent = msg.avatar;
+          showToast('Joined room ' + state.code, 'success');
+          break;
+
+        case 'LOBBY_UPDATE': {
+          const lobbyState = msg.state || msg;
+          state.players = lobbyState.players || [];
+          state.isAdmin = state.players.some(p => p.playerId === state.playerId && p.isAdmin);
+          state.gameSuggestions = lobbyState.gameSuggestions || {};
+          renderLobbyPlayers();
+          renderAdminControls();
+          break;
+        }
+
+        case 'MINI_GAME_STARTING':
+          state.gameType = msg.gameType;
+          state.selectedAnswer = null;
+          state.eliminatedAnswers = [];
+          state.guessHistory = [];
+          state.powerupsUsed = { double: false, '5050': false, freeze: false };
+          showSection(getGameSectionId(msg.gameType));
+          showToast('Game starting!', 'success');
+          break;
+
+        case 'GAME_STATE':
+          handleGameState(msg);
+          break;
+
+        case 'ERROR':
+          showToast(msg.message || 'An error occurred', 'error');
+          break;
+
+        case 'CHAT_MESSAGE':
+          addChatMessage(msg.name, msg.text);
+          break;
+
+        default:
+          console.log('Unknown message:', msg);
+      }
+    }
+
+    function handleGameState(msg) {
+      // Track game type and player names if provided
+      if (msg.gameType) state.gameType = msg.gameType;
+      if (msg.playerNames) state.playerNames = msg.playerNames;
+
+      if (msg.phase === 'finished') {
+        if (msg.winner) {
+          showToast('Game over! Winner decided!', 'success');
+        }
+        // Show final state before returning to lobby
+        switch (state.gameType) {
+          case 'number-guess': renderNumberGuessState(msg); break;
+          case 'quiz': renderQuizState(msg); break;
+          case 'spy': renderSpyState(msg); break;
+          case 'shithead': renderShitheadState(msg); break;
+        }
+        // Return to lobby after a delay
+        setTimeout(() => {
+          state.gameType = null;
+          state.ready = false;
+          updateReadyBtn();
+          showSection('lobbySection');
+        }, 3000);
+        return;
+      }
+
+      // Ensure game section is visible
+      if (state.gameType) {
+        const sectionId = getGameSectionId(state.gameType);
+        const section = document.getElementById(sectionId);
+        if (section && !section.classList.contains('active')) {
+          showSection(sectionId);
+        }
+      }
+
+      switch (state.gameType) {
+        case 'number-guess': renderNumberGuessState(msg); break;
+        case 'quiz': renderQuizState(msg); break;
+        case 'spy': renderSpyState(msg); break;
+        case 'shithead': renderShitheadState(msg); break;
+      }
+    }
+
+    // --- Sections ---
+    function showSection(id) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      const el = document.getElementById(id);
+      if (el) el.classList.add('active');
+    }
+
+    function getGameSectionId(game) {
+      const map = { 'number-guess': 'numberGuessSection', 'quiz': 'quizSection', 'spy': 'spySection', 'shithead': 'shitheadSection' };
+      return map[game] || 'lobbySection';
+    }
+
+    // --- Lobby ---
+    function renderLobbyPlayers() {
+      const container = document.getElementById('lobbyPlayers');
+      if (state.players.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-secondary);font-size:0.9rem;">Waiting for players...</div>';
+        return;
+      }
+
+      container.innerHTML = '<div class="player-list">' + state.players.map((p, i) => {
+        const avatar = AVATARS[i % AVATARS.length];
+        const readyText = p.ready
+          ? '<span class="player-ready">Ready</span>'
+          : '<span class="player-not-ready">Not ready</span>';
+        const pName = p.username || p.name;
+        const isMe = pName === state.name ? ' style="border-left:3px solid var(--neon-purple);padding-left:12px;"' : '';
+        return '<div class="player-item"' + isMe + '>' +
+          '<span class="player-avatar">' + avatar + '</span>' +
+          '<span class="player-name">' + escapeHtml(pName) + '</span>' +
+          readyText + '</div>';
+      }).join('') + '</div>';
+    }
+
+    function toggleReady() {
+      state.ready = !state.ready;
+      send({ type: 'SET_READY', ready: state.ready });
+      updateReadyBtn();
+    }
+
+    function updateReadyBtn() {
+      const btn = document.getElementById('readyBtn');
+      if (state.ready) {
+        btn.textContent = 'Ready!';
+        btn.className = 'btn ready-btn is-ready';
+      } else {
+        btn.textContent = 'Tap to Ready Up';
+        btn.className = 'btn ready-btn btn-secondary';
+      }
+    }
+
+    function suggestGame(game) {
+      state.votedGame = game;
+      send({ type: 'SUGGEST_GAME', gameType: game });
+
+      document.querySelectorAll('.suggest-btn').forEach(b => b.classList.remove('voted'));
+      const id = 'suggest' + game.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join('');
+      const el = document.getElementById(id);
+      if (el) el.classList.add('voted');
+    }
+
+    function renderAdminControls() {
+      const controls = document.getElementById('adminControls');
+      if (!state.isAdmin) {
+        controls.style.display = 'none';
+        return;
+      }
+      controls.style.display = 'block';
+      const suggestions = Object.values(state.gameSuggestions || {});
+      const topGame = suggestions.length > 0 ? suggestions[suggestions.length - 1] : 'number-guess';
+      state.gameToStart = topGame;
+      const names = { 'number-guess': 'Number Guess', 'quiz': 'Quiz', 'spy': 'Spy Game', 'shithead': 'Shithead' };
+
+      let html = '';
+      if (topGame === 'shithead') {
+        html += '<div class="card" style="margin-bottom:8px;padding:12px;">' +
+          '<div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:6px;">Number of decks</div>' +
+          '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-secondary deck-opt' + (state.shitheadDecks === 1 ? ' is-ready' : '') + '" onclick="setShDecks(1)" style="flex:1;padding:10px;">1 deck<br><span style="font-size:0.75rem;opacity:0.7;">52 cards</span></button>' +
+          '<button class="btn btn-secondary deck-opt' + (state.shitheadDecks === 2 ? ' is-ready' : '') + '" onclick="setShDecks(2)" style="flex:1;padding:10px;">2 decks<br><span style="font-size:0.75rem;opacity:0.7;">104 cards</span></button>' +
+          '<button class="btn btn-secondary deck-opt' + (state.shitheadDecks === 4 ? ' is-ready' : '') + '" onclick="setShDecks(4)" style="flex:1;padding:10px;">4 decks<br><span style="font-size:0.75rem;opacity:0.7;">208 cards</span></button>' +
+          '</div></div>';
+      }
+      html += '<button class="btn btn-primary" id="startGameBtn" onclick="startGame()" style="font-size:1.1rem;padding:16px;">Start ' + (names[topGame] || topGame) + '</button>';
+      controls.innerHTML = html;
+    }
+
+    function setShDecks(n) {
+      state.shitheadDecks = n;
+      renderAdminControls();
+    }
+
+    function startGame() {
+      const gameType = state.gameToStart || 'number-guess';
+      const config = {};
+      if (gameType === 'shithead') {
+        config.decks = state.shitheadDecks || 1;
+      }
+      send({ type: 'START_MINI_GAME', gameType, config });
+    }
+
+    // --- Chat ---
+    function sendChat() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+      send({ type: 'CHAT_MESSAGE', text });
+      input.value = '';
+    }
+
+    function addChatMessage(name, text) {
+      const container = document.getElementById('lobbyChatMessages');
+      const el = document.createElement('div');
+      el.className = 'chat-msg';
+      el.innerHTML = '<span class="author">' + escapeHtml(name) + ':</span> ' + escapeHtml(text);
+      container.appendChild(el);
+      container.scrollTop = container.scrollHeight;
+      while (container.children.length > 50) container.removeChild(container.firstChild);
+    }
+
+    // --- Number Guess ---
+    function renderNumberGuessState(msg) {
+      // msg has: phase, round, maxRounds, myGuesses: [{number, result}], otherPlayers, winner?, secret?
+      document.getElementById('ngRoundLabel').textContent = 'Guesses: ' + (msg.myGuesses ? msg.myGuesses.length : 0) + ' / ' + (msg.maxRounds || 10);
+
+      // Show range hint based on guesses
+      let low = 1, high = 100;
+      if (msg.myGuesses) {
+        for (const g of msg.myGuesses) {
+          if (g.result === 'too_low' && g.number >= low) low = g.number + 1;
+          if (g.result === 'too_high' && g.number <= high) high = g.number - 1;
+        }
+      }
+      document.getElementById('ngRange').textContent = low + ' - ' + high;
+
+      // Show feedback from last guess
+      const fb = document.getElementById('ngFeedback');
+      if (msg.myGuesses && msg.myGuesses.length > 0) {
+        const last = msg.myGuesses[msg.myGuesses.length - 1];
+        if (last.result === 'correct') {
+          fb.innerHTML = '<span style="color:var(--neon-green);font-size:1.3rem;font-weight:700;">Correct! The number was ' + last.number + '!</span>';
+        } else if (last.result === 'too_high') {
+          fb.innerHTML = '<span style="color:var(--neon-pink);">Too high!</span>';
+        } else if (last.result === 'too_low') {
+          fb.innerHTML = '<span style="color:var(--neon-blue);">Too low!</span>';
+        }
+      }
+
+      // Show secret on game end
+      if (msg.phase === 'finished' && msg.secret) {
+        fb.innerHTML = '<span style="color:var(--neon-green);font-size:1.3rem;font-weight:700;">The number was ' + msg.secret + '!</span>';
+      }
+
+      // Render guess history
+      const container = document.getElementById('ngHistory');
+      if (msg.myGuesses) {
+        container.innerHTML = msg.myGuesses.map(g => {
+          const icon = g.result === 'correct' ? ' &#9989;' : (g.result === 'too_high' ? ' &#11015;' : ' &#11014;');
+          const cls = g.result === 'correct' ? 'correct' : (g.result === 'too_high' ? 'high' : 'low');
+          return '<span class="guess-chip ' + cls + '">' + g.number + icon + '</span>';
+        }).join('');
+      }
+
+      // Disable input when game over
+      const isOver = msg.phase === 'finished';
+      document.getElementById('ngSubmitBtn').disabled = isOver;
+      document.getElementById('ngInput').disabled = isOver;
+
+      // Show score on finish
+      if (isOver && msg.scores) {
+        document.getElementById('ngScore').style.display = 'block';
+        // Find our score - scores is keyed by playerId, but we don't know our playerId on the client
+        // Just show the winner info
+      }
+    }
+
+    function submitGuess() {
+      const input = document.getElementById('ngInput');
+      const val = parseInt(input.value, 10);
+      if (isNaN(val) || val < 1 || val > 100) {
+        showToast('Enter a number between 1 and 100', 'error');
+        return;
+      }
+      send({ type: 'GAME_ACTION', action: { type: 'guess', number: val } });
+      input.value = '';
+      input.focus();
+    }
+
+    // --- Quiz ---
+    function renderQuizState(msg) {
+      const timerContainer = document.getElementById('quizTimerContainer');
+      const timerBar = document.getElementById('quizTimerBar');
+      const timerText = document.getElementById('quizTimerText');
+
+      if (msg.phase === 'question') {
+        const q = msg.question || {};
+        document.getElementById('quizQuestion').textContent = q.text || '';
+
+        // Timer
+        if (msg.timeLeft != null && msg.timeTotal) {
+          timerContainer.style.display = 'block';
+          const pct = (msg.timeLeft / msg.timeTotal) * 100;
+          timerBar.style.width = pct + '%';
+          timerBar.className = 'timer-bar' + (pct < 20 ? ' critical' : pct < 40 ? ' warning' : '');
+          timerText.textContent = Math.ceil(msg.timeLeft);
+        } else {
+          timerContainer.style.display = 'none';
+          timerText.textContent = '';
+        }
+
+        // Answers
+        const labels = ['A', 'B', 'C', 'D'];
+        const classes = ['answer-a', 'answer-b', 'answer-c', 'answer-d'];
+        const answers = q.answers || [];
+        const grid = document.getElementById('quizAnswers');
+        grid.innerHTML = answers.map((a, i) => {
+          let cls = 'answer-btn ' + classes[i];
+          if (state.selectedAnswer === i) cls += ' selected';
+          if (state.eliminatedAnswers.includes(i)) cls += ' eliminated';
+          const disabled = state.selectedAnswer !== null ? ' disabled' : '';
+          return '<button class="' + cls + '"' + disabled + ' onclick="selectAnswer(' + i + ')">' +
+            '<strong>' + labels[i] + '.</strong> ' + escapeHtml(a) + '</button>';
+        }).join('');
+
+        // Powerups
+        document.getElementById('quizPowerups').style.display = state.selectedAnswer === null ? 'flex' : 'none';
+        updatePowerupBtns();
+
+      } else if (msg.phase === 'reveal') {
+        timerContainer.style.display = 'none';
+        timerText.textContent = '';
+
+        const q = msg.question || {};
+        const labels = ['A', 'B', 'C', 'D'];
+        const classes = ['answer-a', 'answer-b', 'answer-c', 'answer-d'];
+        const answers = q.answers || [];
+        const grid = document.getElementById('quizAnswers');
+        grid.innerHTML = answers.map((a, i) => {
+          let cls = 'answer-btn ' + classes[i];
+          if (i === msg.correctIndex) cls += ' correct';
+          else if (state.selectedAnswer === i) cls += ' incorrect';
+          return '<button class="' + cls + '" disabled>' +
+            '<strong>' + labels[i] + '.</strong> ' + escapeHtml(a) + '</button>';
+        }).join('');
+
+        document.getElementById('quizPowerups').style.display = 'none';
+      }
+
+      if (msg.score != null) {
+        document.getElementById('quizScore').style.display = 'block';
+        document.getElementById('quizScoreVal').textContent = msg.score;
+      }
+    }
+
+    function selectAnswer(index) {
+      if (state.selectedAnswer !== null) return;
+      state.selectedAnswer = index;
+      send({ type: 'GAME_ACTION', action: { type: 'answer', answerId: index } });
+      // Re-render to show selected state
+      renderQuizState({ phase: 'question', question: state._lastQuestion, timeLeft: state._lastTimeLeft, timeTotal: state._lastTimeTotal });
+    }
+
+    function usePowerup(type) {
+      if (state.powerupsUsed[type]) return;
+      state.powerupsUsed[type] = true;
+      send({ type: 'GAME_ACTION', action: { type: 'answer', powerupType: type } });
+      updatePowerupBtns();
+    }
+
+    function updatePowerupBtns() {
+      ['double', '5050', 'freeze'].forEach(p => {
+        const btn = document.getElementById('pw' + (p === 'double' ? 'Double' : p === '5050' ? '5050' : 'Freeze'));
+        if (state.powerupsUsed[p]) {
+          btn.disabled = true;
+          btn.classList.add('used');
+        }
+      });
+    }
+
+    // --- Spy ---
+    function renderSpyState(msg) {
+      state.isSpy = !!msg.isSpy;
+
+      // Role display
+      const roleDisplay = document.getElementById('spyRoleDisplay');
+      if (msg.isSpy) {
+        roleDisplay.innerHTML = '<div class="spy-alert">' +
+          '<div class="spy-alert-title">You are the Spy!</div>' +
+          '<div class="spy-alert-sub">Figure out the secret word from the clues</div></div>';
+      } else if (msg.word) {
+        roleDisplay.innerHTML = '<div class="word-display">' +
+          '<div class="word-label">The secret word is</div>' +
+          '<div class="word-value">' + escapeHtml(msg.word) + '</div></div>';
+      }
+
+      // Show appropriate input
+      const clueInput = document.getElementById('spyClueInput');
+      const guessInput = document.getElementById('spyGuessInput');
+
+      if (msg.phase === 'clue') {
+        clueInput.style.display = msg.isSpy ? 'none' : 'block';
+        guessInput.style.display = 'none';
+      } else if (msg.phase === 'guess') {
+        clueInput.style.display = 'none';
+        guessInput.style.display = msg.isSpy ? 'block' : 'none';
+      } else {
+        clueInput.style.display = 'none';
+        guessInput.style.display = 'none';
+      }
+
+      // Clue list
+      const clues = msg.clues || [];
+      const clueListEl = document.getElementById('spyClueList');
+      const cluesEl = document.getElementById('spyClues');
+      if (clues.length > 0) {
+        clueListEl.style.display = 'block';
+        cluesEl.innerHTML = clues.map(c =>
+          '<div class="clue-item" style="margin-bottom:6px;">' +
+            '<span class="clue-author">' + escapeHtml(c.name) + '</span>' +
+            '<span class="clue-text">"' + escapeHtml(c.text) + '"</span></div>'
+        ).join('');
+      } else {
+        clueListEl.style.display = 'none';
+      }
+
+      // Reveal phase
+      if (msg.phase === 'reveal') {
+        if (msg.word) {
+          roleDisplay.innerHTML = '<div class="word-display">' +
+            '<div class="word-label">The word was</div>' +
+            '<div class="word-value">' + escapeHtml(msg.word) + '</div></div>';
+        }
+        if (msg.spyName) {
+          roleDisplay.innerHTML += '<div class="card mt-2 text-center">' +
+            '<div style="color:var(--neon-pink);font-weight:700;">The spy was: ' + escapeHtml(msg.spyName) + '</div>' +
+            '<div style="color:var(--text-secondary);margin-top:4px;">' +
+              (msg.spyCaught ? 'The spy was caught!' : 'The spy guessed correctly!') +
+            '</div></div>';
+        }
+      }
+
+      if (msg.score != null) {
+        document.getElementById('spyScore').style.display = 'block';
+        document.getElementById('spyScoreVal').textContent = msg.score;
+      }
+    }
+
+    function submitClue() {
+      const input = document.getElementById('clueInput');
+      const text = input.value.trim();
+      if (!text) return;
+      send({ type: 'GAME_ACTION', action: { type: 'sendClue', text } });
+      input.value = '';
+      input.disabled = true;
+      document.getElementById('clueSubmitBtn').disabled = true;
+      showToast('Clue submitted!', 'success');
+    }
+
+    function submitSpyGuess() {
+      const input = document.getElementById('spyGuessField');
+      const text = input.value.trim();
+      if (!text) return;
+      send({ type: 'GAME_ACTION', action: { type: 'sendGuess', text } });
+      input.value = '';
+      input.disabled = true;
+      document.getElementById('spyGuessBtn').disabled = true;
+    }
+
+    // --- Shithead ---
+    function renderShitheadState(msg) {
+      // msg has: phase, currentPlayer, myHand, myFaceUp, myFaceDownCount, pileTop, pileCount, drawPileCount, players, finishOrder, isMyTurn, swapConfirmed
+
+      if (msg.phase === 'swap') {
+        document.getElementById('shSwapView').style.display = 'block';
+        document.getElementById('shPlayView').style.display = 'none';
+        renderShSwap(msg);
+      } else if (msg.phase === 'play') {
+        document.getElementById('shSwapView').style.display = 'none';
+        document.getElementById('shPlayView').style.display = 'block';
+        renderShPlay(msg);
+      }
+
+      // Show other players
+      renderShOtherPlayers(msg);
+    }
+
+    function renderShSwap(msg) {
+      const handDiv = document.getElementById('shSwapHand');
+      const faceUpDiv = document.getElementById('shSwapFaceUp');
+
+      handDiv.innerHTML = (msg.myHand || []).slice().sort((a, b) => a.rank - b.rank).map(c =>
+        '<div class="playing-card ' + cardColor(c) + '" onclick="shSwapSelect(\'hand\',\'' + c.id + '\')" ' +
+        'id="shSwapH_' + c.id + '">' + cardDisplay(c) + '</div>'
+      ).join('');
+
+      faceUpDiv.innerHTML = (msg.myFaceUp || []).slice().sort((a, b) => a.rank - b.rank).map(c =>
+        '<div class="playing-card ' + cardColor(c) + '" onclick="shSwapSelect(\'faceUp\',\'' + c.id + '\')" ' +
+        'id="shSwapF_' + c.id + '">' + cardDisplay(c) + '</div>'
+      ).join('');
+
+      // Highlight selected
+      if (state.shSwapSelected.hand) {
+        const el = document.getElementById('shSwapH_' + state.shSwapSelected.hand);
+        if (el) el.classList.add('selected');
+      }
+      if (state.shSwapSelected.faceUp) {
+        const el = document.getElementById('shSwapF_' + state.shSwapSelected.faceUp);
+        if (el) el.classList.add('selected');
+      }
+
+      const confirmed = msg.swapConfirmed && msg.swapConfirmed[state.playerId];
+      document.getElementById('shConfirmSwapBtn').disabled = !!confirmed;
+      document.getElementById('shConfirmSwapBtn').textContent = confirmed ? 'Confirmed' : 'Done Swapping';
+    }
+
+    function shSwapSelect(source, cardId) {
+      if (source === 'hand') {
+        state.shSwapSelected.hand = state.shSwapSelected.hand === cardId ? null : cardId;
+      } else {
+        state.shSwapSelected.faceUp = state.shSwapSelected.faceUp === cardId ? null : cardId;
+      }
+
+      // If both selected, do the swap
+      if (state.shSwapSelected.hand && state.shSwapSelected.faceUp) {
+        send({ type: 'GAME_ACTION', action: { type: 'swapCard', handCardId: state.shSwapSelected.hand, faceUpCardId: state.shSwapSelected.faceUp } });
+        state.shSwapSelected = { hand: null, faceUp: null };
+      }
+
+      // Re-render to show selection (will be overwritten by next GAME_STATE)
+      document.querySelectorAll('#shSwapHand .playing-card, #shSwapFaceUp .playing-card').forEach(el => el.classList.remove('selected'));
+      if (state.shSwapSelected.hand) {
+        const el = document.getElementById('shSwapH_' + state.shSwapSelected.hand);
+        if (el) el.classList.add('selected');
+      }
+      if (state.shSwapSelected.faceUp) {
+        const el = document.getElementById('shSwapF_' + state.shSwapSelected.faceUp);
+        if (el) el.classList.add('selected');
+      }
+    }
+
+    function confirmShSwap() {
+      send({ type: 'GAME_ACTION', action: { type: 'confirmSwap' } });
+    }
+
+    function renderShPlay(msg) {
+      // Pile
+      document.getElementById('shPileCount').textContent = msg.pileCount || 0;
+      if (msg.pileTop) {
+        document.getElementById('shPileTop').innerHTML = '<div class="playing-card pile-card ' + cardColor(msg.pileTop) + '" style="margin:0 auto;">' + cardDisplay(msg.pileTop) + '</div>';
+      } else {
+        document.getElementById('shPileTop').innerHTML = '<div style="font-size:1.5rem;color:var(--text-secondary);padding:20px 0;">Empty</div>';
+      }
+
+      // Turn info
+      const turnInfo = document.getElementById('shTurnInfo');
+      if (msg.isMyTurn) {
+        turnInfo.innerHTML = '<span style="color:var(--neon-green);font-weight:700;">Your turn!</span>';
+        // Haptic feedback when it becomes your turn
+        if (!state.shWasTurn) {
+          if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+          state.shWasTurn = true;
+        }
+      } else {
+        state.shWasTurn = false;
+        const cpName = (msg.playerNames || {})[msg.currentPlayer] || 'other player';
+        turnInfo.innerHTML = '<span style="color:var(--text-secondary);">Waiting for ' + escapeHtml(cpName) + '...</span>';
+      }
+
+      const shitheadSection = document.getElementById('shitheadSection');
+      if (msg.isMyTurn) {
+        shitheadSection.classList.add('my-turn-glow');
+      } else {
+        shitheadSection.classList.remove('my-turn-glow');
+      }
+
+      // Hand (sorted by rank, low to high)
+      const handDiv = document.getElementById('shHand');
+      const hand = (msg.myHand || []).slice().sort((a, b) => a.rank - b.rank);
+      const topRank = msg.pileTopRank;
+      const pileCount = msg.pileCount || 0;
+      handDiv.innerHTML = hand.length > 0 ? hand.map(c => {
+        const playable = msg.isMyTurn && canPlayCard(c.rank, topRank, pileCount);
+        const cls = cardColor(c) +
+          (state.shSelectedCards.includes(c.id) ? ' selected' : '') +
+          (msg.isMyTurn ? (playable ? ' playable' : ' unplayable') : '');
+        return '<div class="playing-card ' + cls + '" ' +
+          (playable || !msg.isMyTurn ? 'onclick="shToggleCard(\'' + c.id + '\')"' : '') +
+          '>' + cardDisplay(c) + '</div>';
+      }).join('') : '<span style="color:var(--text-secondary);font-size:0.85rem;">Empty</span>';
+
+      // Face up (sorted by rank)
+      const faceUpDiv = document.getElementById('shFaceUp');
+      const faceUp = (msg.myFaceUp || []).slice().sort((a, b) => a.rank - b.rank);
+      const faceUpSection = document.getElementById('shFaceUpSection');
+      if (hand.length === 0 && faceUp.length > 0) {
+        faceUpSection.style.display = 'block';
+        faceUpDiv.innerHTML = faceUp.map(c => {
+          const playable = msg.isMyTurn && canPlayCard(c.rank, topRank, pileCount);
+          const cls = cardColor(c) +
+            (state.shSelectedCards.includes(c.id) ? ' selected' : '') +
+            (msg.isMyTurn ? (playable ? ' playable' : ' unplayable') : '');
+          return '<div class="playing-card ' + cls + '" ' +
+            (playable || !msg.isMyTurn ? 'onclick="shToggleCard(\'' + c.id + '\')"' : '') +
+            '>' + cardDisplay(c) + '</div>';
+        }).join('');
+      } else {
+        faceUpSection.style.display = faceUp.length > 0 ? 'block' : 'none';
+        faceUpDiv.innerHTML = faceUp.map(c =>
+          '<div class="playing-card ' + cardColor(c) + '" style="opacity:0.5;">' + cardDisplay(c) + '</div>'
+        ).join('');
+      }
+
+      // Face down
+      const faceDownSection = document.getElementById('shFaceDownSection');
+      const fdCount = msg.myFaceDownCount || 0;
+      const fdIds = msg.myFaceDownIds || [];
+      if (hand.length === 0 && faceUp.length === 0 && fdCount > 0) {
+        faceDownSection.style.display = 'block';
+        document.getElementById('shFaceDown').innerHTML = fdIds.map(id =>
+          '<div class="playing-card facedown" onclick="shPlayFaceDown(\'' + id + '\')">?</div>'
+        ).join('');
+      } else {
+        faceDownSection.style.display = fdCount > 0 ? 'block' : 'none';
+        document.getElementById('shFaceDown').innerHTML = Array.from({length: fdCount}, () =>
+          '<div class="playing-card facedown" style="opacity:0.5;">?</div>'
+        ).join('');
+      }
+
+      // Enable/disable action buttons
+      document.getElementById('shPlayBtn').disabled = !msg.isMyTurn || state.shSelectedCards.length === 0;
+      document.getElementById('shPickUpBtn').disabled = !msg.isMyTurn || (msg.pileCount || 0) === 0;
+    }
+
+    function shToggleCard(cardId) {
+      const idx = state.shSelectedCards.indexOf(cardId);
+      if (idx >= 0) {
+        state.shSelectedCards.splice(idx, 1);
+      } else {
+        state.shSelectedCards.push(cardId);
+      }
+      // Re-render selection visually without waiting for server
+      document.querySelectorAll('#shHand .playing-card, #shFaceUp .playing-card').forEach(el => {
+        const id = el.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+        if (id && state.shSelectedCards.includes(id)) el.classList.add('selected');
+        else el.classList.remove('selected');
+      });
+      document.getElementById('shPlayBtn').disabled = state.shSelectedCards.length === 0;
+    }
+
+    function playSelectedCards() {
+      if (state.shSelectedCards.length === 0) return;
+      send({ type: 'GAME_ACTION', action: { type: 'playCards', cardIds: [...state.shSelectedCards] } });
+      state.shSelectedCards = [];
+    }
+
+    function shPlayFaceDown(cardId) {
+      showToast('Playing face-down card...', 'info');
+      send({ type: 'GAME_ACTION', action: { type: 'playFaceDown', cardId: cardId } });
+    }
+
+    function pickUpPile() {
+      send({ type: 'GAME_ACTION', action: { type: 'pickUpPile' } });
+    }
+
+    function renderShOtherPlayers(msg) {
+      const container = document.getElementById('shOtherPlayers');
+      const names = msg.playerNames || {};
+      const others = (msg.players || []).filter(p => p.playerId !== state.playerId);
+      if (others.length === 0) { container.style.display = 'none'; return; }
+      container.style.display = 'block';
+
+      container.innerHTML = '<div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:6px;">Other Players</div>' +
+        others.map(p => {
+          const name = names[p.playerId] || p.playerId;
+          const status = p.isOut ? '<span style="color:var(--neon-green);">Out!</span>' :
+            'Hand: ' + p.handCount + ' | Up: ' + (p.faceUp ? p.faceUp.length : 0) + ' | Down: ' + p.faceDownCount;
+          const isCurrent = p.playerId === msg.currentPlayer ? ' style="border-left:3px solid var(--neon-purple);padding-left:8px;"' : '';
+          return '<div class="player-item"' + isCurrent + '>' +
+            '<span class="player-name">' + escapeHtml(name) + '</span>' +
+            '<span style="font-size:0.8rem;color:var(--text-secondary);">' + status + '</span></div>';
+        }).join('');
+    }
+
+    // Card display helpers
+    function cardDisplay(c) {
+      if (!c) return '?';
+      const ranks = {2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'};
+      const suits = {h:'\u2665',d:'\u2666',c:'\u2663',s:'\u2660'};
+      const r = ranks[c.rank] || c.rank;
+      const s = suits[c.suit] || c.suit;
+      return '<span class="card-rank">' + r + '</span><span class="card-suit">' + s + '</span>';
+    }
+
+    function cardColor(c) {
+      if (!c) return '';
+      return (c.suit === 'h' || c.suit === 'd') ? 'red' : 'black';
+    }
+
+    // Check if a card rank can be played on the current pile
+    function canPlayCard(rank, pileTopRank, pileCount) {
+      if (pileCount === 0) return true;
+      if (rank === 2) return true;
+      if (rank === 10) return true;
+      if (pileTopRank === null || pileTopRank === undefined) return true;
+      if (pileTopRank === 7) return rank <= 7;
+      return rank >= pileTopRank;
+    }
+
+    // --- UI Helpers ---
+    function setConnectionStatus(status, text) {
+      const el = document.getElementById('connStatus');
+      el.className = 'connection-status ' + status;
+      document.getElementById('connText').textContent = text;
+    }
+
+    function showToast(message, type) {
+      const container = document.getElementById('toasts');
+      const toast = document.createElement('div');
+      toast.className = 'toast' + (type ? ' toast-' + type : '');
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('toast-exit');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
